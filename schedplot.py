@@ -13,8 +13,6 @@ win = pg.GraphicsWindow()
 win.setWindowTitle('schedplot')
 layout = pg.GraphicsLayout()
 win.setCentralItem(layout)
-label = pg.LabelItem(justify='right')
-layout.addItem(label)
 
 class KernelEntryType(Enum):
     Interrupt = 0,
@@ -123,10 +121,15 @@ def plot_data(plot_target, grouped_events):
 plot_data(plot_upper, g_events)
 plot_data(plot_lower, g_events)
 
+tooltip = pg.TextItem(anchor=(1, 1), fill=pg.mkBrush(0, 0, 0, 128))
+tooltip.setPos(0, 0)
+plot_upper.addItem(tooltip)
+
 def update():
     region.setZValue(10)
     minX, maxX = region.getRegion()
     plot_upper.setXRange(minX, maxX, padding=0)
+    plot_upper.setYRange(0, len(g_events.keys()), padding=0)
 
 region.sigRegionChanged.connect(update)
 
@@ -138,17 +141,27 @@ plot_upper.sigRangeChanged.connect(updateRegion)
 
 region.setRegion([1, 2])
 
+tooltip_format = """
+<span style='font-size: 12pt; color: white'>%s</span> <br/>
+<span style='font-size: 10pt; color: white'>%s</span>
+"""
+
 def mouseMoved(evt):
     pos = evt[0]  ## using signal proxy turns original arguments into a tuple
     if plot_upper.sceneBoundingRect().contains(pos):
         mousePoint = hscroll_viewbox.mapSceneToView(pos)
-        text = "no selection"
         event = get_event_at(mousePoint.x(), mousePoint.y(), g_events)
-        if event is not None:
-            text = event.detail_text
-        label.setText("<span style='font-size: 12pt; color: white'>x=%0.2f, y=%0.2f, text=%s</span>" % (mousePoint.x(), mousePoint.y(), text))
+
+        if event is None:
+            tooltip.setVisible(False)
+            return
+
+        tooltip.setHtml(tooltip_format % (event.name, event.detail_text))
+        tooltip.setPos(mousePoint.x(), mousePoint.y())
+        tooltip.setVisible(True)
     else:
-        label.setText("")
+        tooltip.setVisible(False)
+        return
 
 proxy = pg.SignalProxy(plot_upper.scene().sigMouseMoved, rateLimit=60, slot=mouseMoved)
 
