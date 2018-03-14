@@ -6,77 +6,8 @@ from pyqtgraph.Qt import QtGui, QtCore
 from pyqtgraph.Point import Point
 from enum import Enum
 from collections import defaultdict
-
-data = """0,kernel,1,2957114191,2957118726
-0,ff277500,1,2957118726,2957143504
-1,kernel,5,2957143504,2957205260
-1,f7fee100,5,2957205260,2975324079
-2,kernel,0,2975324079,2975388561
-2,ff106100,0,2975388561,2978085793
-3,kernel,0,2978085793,2978169383
-3,ff277500,0,2978169383,2978191917
-4,kernel,5,2978191917,2978257820
-4,f7fee900,5,2978257820,2999130046
-5,kernel,0,2999130046,2999188907
-5,ff277500,0,2999188907,2999204300
-6,kernel,5,2999204300,2999263193
-6,f7feed00,5,2999263193,3000249042
-7,kernel,0,3000249042,3000303147
-7,ff106100,0,3000303147,3020141288
-8,kernel,0,3020141288,3020204600
-8,ff277500,0,3020204600,3020220879
-9,kernel,5,3020220879,3020284518
-9,f7fee500,5,3020284518,3025170573
-10,kernel,0,3025170573,3025224506
-10,ff106100,0,3025224506,3041156048
-11,kernel,0,3041156048,3041224328
-11,ff277500,0,3041224328,3041238579
-12,kernel,5,3041238579,3041297147
-12,f7fee100,5,3041297147,3050098330
-13,kernel,0,3050098330,3050151670
-13,ff106100,0,3050151670,3062174831
-14,kernel,0,3062174831,3062250081
-14,ff277500,0,3062250081,3062269551
-15,kernel,5,3062269551,3062332452
-15,f7fee900,5,3062332452,3075024964
-16,kernel,0,3075024964,3075084766
-16,ff106100,0,3075084766,3083206039
-17,kernel,0,3083206039,3083266269
-17,ff277500,0,3083266269,3083281411
-18,kernel,5,3083281411,3083338861
-18,f7feed00,5,3083338861,3099967194
-19,kernel,0,3099967194,3100011854
-19,ff106100,0,3100011854,3104212852
-20,kernel,0,3104212852,3104278670
-20,ff277500,0,3104278670,3104293838
-21,kernel,5,3104293838,3104352250
-21,f7fee500,5,3104352250,3124894856
-22,kernel,0,3124894856,3124963991
-22,ff106100,0,3124963991,3125228929
-23,kernel,0,3125228929,3125311134
-23,ff277500,0,3125311134,3125331682
-24,kernel,5,3125331682,3125396123
-24,f7fee100,5,3125396123,3146282164
-25,kernel,0,3146282164,3146402364
-25,ff277500,0,3146402364,3146431342
-26,kernel,5,3146431342,3146496983
-26,f7fee900,5,3146496983,3149821982
-27,kernel,0,3149821982,3149883230
-27,ff106100,0,3149883230,3167373224
-28,kernel,0,3167373224,3167451004
-28,ff277500,0,3167451004,3167470845
-29,kernel,5,3167470845,3167534247
-29,f7feed00,5,3167534247,3174746980
-30,kernel,0,3174746980,3174807784
-30,ff106100,0,3174807784,3188407219
-31,kernel,0,3188407219,3188467115
-31,ff277500,0,3188467115,3188481282
-32,kernel,5,3188481282,3188541926
-32,f7fee500,5,3188541926,3199671360
-33,kernel,0,3199671360,3199723558
-33,ff106100,0,3199723558,3209415978
-34,kernel,0,3209415978,3209480811
-34,ff277500,0,3209480811,3209489343"""
+from bitstruct import *
+from si_prefix import si_format
 
 app = QtGui.QApplication([])
 win = pg.GraphicsWindow()
@@ -85,47 +16,135 @@ layout = pg.GraphicsLayout()
 win.setCentralItem(layout)
 
 class KernelEntryType(Enum):
-    Interrupt = 0,
-    UnknownSyscall = 1,
-    UserLevelFault = 2,
-    DebugFault = 3,
-    VMFault = 4,
-    Syscall = 5,
-    UnimplementedDevice = 6,
+    Interrupt = 0
+    UnknownSyscall = 1
+    UserLevelFault = 2
+    DebugFault = 3
+    VMFault = 4
+    Syscall = 5
+    UnimplementedDevice = 6
+
+class SyscallType(Enum):
+    Call = 1
+    ReplyRecv = 2
+    NBSendRecv = 3
+    NBSendWait = 4
+    Send = 5
+    NBSend = 6
+    Recv = 7
+    NBRecv = 8
+    Wait = 9
+    NBWait = 10
+    Yield = 11
 
 class TraceEvent(object):
-    def __init__(self, name, detail_text, start_time, end_time=None):
+    def __init__(self, name, detail_text, start_time, end_time=None, cpu_id=None, exit_id=None):
         self.name = name
         self.detail_text = detail_text
         self.start_time = start_time
         self.end_time = end_time
-
-
-trace_events = [
-            TraceEvent("Task A", "yep, task A", 0, 2),
-            TraceEvent("Task A", "yep, task A", 3, 4),
-            TraceEvent("Task A", "yep, task A", 7, 7.5),
-            TraceEvent("Task B", "yep, task B", 2, 3),
-            TraceEvent("Task B", "yep, task B", 4, 6),
-            TraceEvent("Task C", "yep, task C", 6, 7),
-            TraceEvent("Task C", "yep, task C", 7.5, 8),
-            TraceEvent("Interrupt", "yep, irq1", 4.5),
-            TraceEvent("Interrupt", "yep, irq2", 5),
-            ]
+        self.cpu_id = cpu_id
+        self.exit_id = exit_id
 
 trace_events = []
-first_event = None
-for line in data.split('\n'):
-    log_id, name, path, start, stop = tuple(line.split(','))
-    start = float(start)/1000000000
-    stop = float(stop)/1000000000
-    if first_event is None:
-        first_event = start
 
-    start -= first_event
-    stop -= first_event
+clock_speed = 1000000000
 
-    trace_events.append(TraceEvent(name, "N: %s - P: %s" % (log_id, path), start, stop))
+def decode_kernel_path(entry_type, word_int):
+    if entry_type == KernelEntryType.Interrupt:
+        return "IRQ #{}".format(word_int)
+    elif entry_type == KernelEntryType.UnknownSyscall:
+        return "word = {}".format(word_int)
+    elif entry_type == KernelEntryType.VMFault:
+        return "fault_type = {}".format(word_int)
+    elif entry_type == KernelEntryType.UserLevelFault:
+        return "fault_number = {}".format(word_int)
+    elif entry_type == KernelEntryType.DebugFault:
+        return "fault_vaddr = {}".format(hex(word_int))
+    elif entry_type == KernelEntryType.Syscall:
+        word_int <<= 3
+        word_bytes = word_int.to_bytes(4, byteorder='big')
+        tuple_of_data = unpack("u19u1u5u4u3", word_bytes)
+        (invoc_tag, is_fastpath, cap_type, syscall_no, _) = tuple_of_data
+        return "{} - [fp:{},ct:{}]".format(SyscallType(syscall_no), is_fastpath, cap_type)
+
+    return "Unknown"
+
+def print_time(t):
+    return si_format(t, precision=3) + 's'
+
+def populate_events(file_name):
+    with open(file_name, 'r') as f:
+        first_event = None
+        for line in f.readlines():
+
+            values = tuple(line.strip().split(','))
+
+            (log_id, cpu_id, start, duration, path, path_word,
+                exit_tcb_addr, exit_tcb_name) = values
+
+            start = float(start)/clock_speed
+            duration = float(duration)/clock_speed
+
+            if first_event is None:
+                first_event = start
+
+            start -= first_event
+
+            path_info = decode_kernel_path(KernelEntryType(int(path)), int(path_word, 16))
+
+            exit_tcb_ident = "[0x{}] '{}'".format(exit_tcb_addr, exit_tcb_name)
+
+            def detail(name, value):
+                return "<b>{}:</b> {}".format(name, value)
+
+            kernel_details = "<br/>".join([
+                    detail("log_id", log_id),
+                    detail("cpu_id", cpu_id),
+                    detail("path", str(KernelEntryType(int(path)))),
+                    detail("path_info", path_info),
+                    detail("exit_to", exit_tcb_ident),
+                    detail("event_duration", print_time(duration)),
+                    ])
+
+            kernel_name = "kernel"
+
+            # Append the kernel event
+            trace_events.append(
+                TraceEvent(kernel_name,
+                           kernel_details,
+                           start,
+                           start + duration,
+                           int(cpu_id),
+                           exit_tcb_ident))
+
+            # Possibly create a thread event if we have older kernel events on the same core
+            # TODO: what happens with sched context donation?
+            local_trace_events = filter(lambda e: e.cpu_id == int(cpu_id), trace_events)
+            local_kernel_events = list(filter(lambda e: e.name == kernel_name, local_trace_events))
+            if len(local_kernel_events) > 1:
+                last_kernel_event = local_kernel_events[-2]
+
+                thread_name = last_kernel_event.exit_id
+                thread_start = last_kernel_event.end_time
+                thread_stop = start # of the current kernel event
+
+                thread_details = "<br/>".join([
+                        detail("log_id", log_id + "*"),
+                        detail("cpu_id", cpu_id),
+                        detail("path_out", str(KernelEntryType(int(path)))),
+                        detail("next_thread", exit_tcb_ident), # (next thread on the this core)
+                        detail("event_duration", print_time(thread_stop - thread_start)),
+                        ])
+
+                trace_events.append(
+                    TraceEvent(thread_name,
+                               thread_details,
+                               thread_start,
+                               thread_stop))
+
+
+populate_events('sample.txt')
 
 def group_events(events):
     """Sort trace events by name, forming a dictionary of event lists under each name sorted by start time"""
@@ -136,10 +155,16 @@ def group_events(events):
         event_groups[group_name] = sorted(event_groups[group_name], key=lambda e: e.start_time)
     return event_groups
 
+def create_time_axis():
+    time_axis = pg.AxisItem(orientation='bottom')
+    time_axis.setLabel(units='S')
+    time_axis.enableAutoSIPrefix(True)
+    return time_axis
+
 def create_event_axis(grouped_events):
     task_axis = pg.AxisItem(orientation='left')
     task_axis.setTicks([
-        [(index+0.5, name) for index, name in enumerate(grouped_events.keys())],
+        [(index+0.5, name.replace(']', ']\n')) for index, name in enumerate(grouped_events.keys())],
         ])
     return task_axis
 
@@ -164,7 +189,9 @@ noscroll_viewbox = pg.ViewBox()
 noscroll_viewbox.setMouseEnabled(x=False, y=False)
 hscroll_viewbox = pg.ViewBox()
 hscroll_viewbox.setMouseEnabled(x=True, y=False)
-plot_upper = layout.addPlot(row=0, col=0, axisItems={'left': create_event_axis(g_events)}, viewBox=hscroll_viewbox)
+plot_upper = layout.addPlot(row=0, col=0,
+    axisItems={'left': create_event_axis(g_events), 'bottom': create_time_axis()},
+    viewBox=hscroll_viewbox)
 plot_lower = layout.addPlot(row=1, col=0, viewBox=noscroll_viewbox)
 layout.layout.setRowStretchFactor(0, 3)
 
@@ -227,8 +254,8 @@ plot_upper.sigRangeChanged.connect(updateRegion)
 region.setRegion([1, 2])
 
 tooltip_format = """
-<span style='font-size: 12pt; color: white'>%s</span> <br/>
-<span style='font-size: 10pt; color: white'>%s</span>
+<span style='font-size: 10pt; color: white'><b>%s</b></span> <br/>
+<span style='font-size: 8pt; color: white'>%s</span>
 """
 
 def mouseMoved(evt):
