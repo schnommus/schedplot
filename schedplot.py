@@ -74,6 +74,7 @@ def print_time(t):
     return si_format(t, precision=3) + 's'
 
 def populate_events(file_name):
+    final_event_time = None
     with open(file_name, 'r') as f:
         first_event = None
         for line in f.readlines():
@@ -91,6 +92,9 @@ def populate_events(file_name):
 
             start -= first_event
 
+            # Always update this in case it's the 'last' event
+            final_event_time = start + duration
+
             path_info = decode_kernel_path(KernelEntryType(int(path)), int(path_word, 16))
 
             exit_tcb_ident = "[0x{}] '{}'".format(exit_tcb_addr, exit_tcb_name)
@@ -101,13 +105,13 @@ def populate_events(file_name):
             kernel_details = "<br/>".join([
                     detail("log_id", log_id),
                     detail("cpu_id", cpu_id),
-                    detail("path", str(KernelEntryType(int(path)))),
+                    detail("path_in", str(KernelEntryType(int(path)))),
                     detail("path_info", path_info),
                     detail("exit_to", exit_tcb_ident),
                     detail("event_duration", print_time(duration)),
                     ])
 
-            kernel_name = "kernel"
+            kernel_name = "Kernel"
 
             # Append the kernel event
             trace_events.append(
@@ -133,7 +137,7 @@ def populate_events(file_name):
                         detail("log_id", log_id + "*"),
                         detail("cpu_id", cpu_id),
                         detail("path_out", str(KernelEntryType(int(path)))),
-                        detail("next_thread", exit_tcb_ident), # (next thread on the this core)
+                        detail("next_thread", exit_tcb_ident), # next thread on the this core
                         detail("event_duration", print_time(thread_stop - thread_start)),
                         ])
 
@@ -143,8 +147,10 @@ def populate_events(file_name):
                                thread_start,
                                thread_stop))
 
+    return final_event_time
 
-populate_events('sample.txt')
+
+final_event_time = populate_events('sample.txt')
 
 def group_events(events):
     """Sort trace events by name, forming a dictionary of event lists under each name sorted by start time"""
@@ -187,6 +193,7 @@ g_events = group_events(trace_events)
 
 noscroll_viewbox = pg.ViewBox()
 noscroll_viewbox.setMouseEnabled(x=False, y=False)
+noscroll_viewbox.setLimits(xMin=0, xMax=final_event_time)
 hscroll_viewbox = pg.ViewBox()
 hscroll_viewbox.setMouseEnabled(x=True, y=False)
 plot_upper = layout.addPlot(row=0, col=0,
@@ -197,6 +204,8 @@ layout.layout.setRowStretchFactor(0, 3)
 
 region = pg.LinearRegionItem()
 region.setZValue(10)
+region.setBounds((0, final_event_time))
+region.setRegion((0, final_event_time))
 # Add the LinearRegionItem to the ViewBox, but tell the ViewBox to exclude this
 # item when doing auto-range calculations.
 plot_lower.addItem(region, ignoreBounds=True)
