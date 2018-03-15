@@ -37,14 +37,23 @@ class SyscallType(Enum):
     NBWait = 10
     Yield = 11
 
+class FaultType(Enum):
+    NullFault = 0
+    CapFault = 1
+    UnknownSyscall = 2
+    UserException = 3
+    Timeout = 5
+    VMFault = 6
+
 class TraceEvent(object):
-    def __init__(self, name, detail_text, start_time, end_time=None, cpu_id=None, exit_id=None):
+    def __init__(self, name, detail_text, start_time, end_time=None, cpu_id=None, exit_id=None, fault=False):
         self.name = name
         self.detail_text = detail_text
         self.start_time = start_time
         self.end_time = end_time
         self.cpu_id = cpu_id
         self.exit_id = exit_id
+        self.fault = fault
 
 trace_events = []
 
@@ -82,7 +91,7 @@ def populate_events(file_name):
             values = tuple(line.strip().split(','))
 
             (log_id, cpu_id, start, duration, path, path_word,
-                exit_tcb_addr, exit_tcb_name) = values
+                exit_tcb_addr, exit_tcb_name, fault) = values
 
             start = float(start)/clock_speed
             duration = float(duration)/clock_speed
@@ -108,6 +117,7 @@ def populate_events(file_name):
                     detail("path_in", str(KernelEntryType(int(path)))),
                     detail("path_info", path_info),
                     detail("exit_to", exit_tcb_ident),
+                    detail("current_fault", str(FaultType(int(fault)))),
                     detail("event_duration", print_time(duration)),
                     ])
 
@@ -137,15 +147,19 @@ def populate_events(file_name):
                         detail("log_id", log_id + "*"),
                         detail("cpu_id", cpu_id),
                         detail("path_out", str(KernelEntryType(int(path)))),
+                        detail("fault_out", str(FaultType(int(fault)))),
                         detail("next_thread", exit_tcb_ident), # next thread on the this core
                         detail("event_duration", print_time(thread_stop - thread_start)),
                         ])
+
+                fault = FaultType(int(fault)) is not FaultType.NullFault
 
                 trace_events.append(
                     TraceEvent(thread_name,
                                thread_details,
                                thread_start,
-                               thread_stop))
+                               thread_stop,
+                               None, None, fault))
 
     return final_event_time
 
@@ -219,15 +233,21 @@ def plot_data(plot_target, grouped_events):
         event_list = grouped_events[event_name]
         if len(event_list) > 0:
             event_plot = None
+            fault_plot = None
 
             if event_list[0].end_time is not None:
                 all_begs = []
                 all_ends = []
+                all_faults = []
                 for e in event_list:
                     all_begs.append(e.start_time)
                     all_ends.append(e.end_time)
+                    if e.fault:
+                        all_faults.append(e.end_time)
                 colour = pg.hsvColor(y_offset/n_events)
                 event_plot = pg.BarGraphItem(x0=all_begs, x1=all_ends, height=1, y0=[y_offset]*len(all_begs), brush=colour)
+                y_points = [y_offset+0.5]*len(all_faults)
+                fault_plot = pg.ScatterPlotItem(x=all_faults, y=y_points, brush='r', size=20, symbol='x')
             else:
                 all_begs = []
                 for e in event_list:
@@ -237,6 +257,10 @@ def plot_data(plot_target, grouped_events):
                 event_plot = pg.ScatterPlotItem(x=all_begs, y=y_points, brush=colour, size=20, symbol='t')
 
             plot_target.addItem(event_plot)
+
+            if fault_plot is not None:
+                plot_target.addItem(fault_plot)
+
             y_offset += 1
 
 plot_data(plot_upper, g_events)
