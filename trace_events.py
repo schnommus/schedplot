@@ -13,6 +13,12 @@ class TraceEvent(object):
         self.exit_id = exit_id
         self.fault = fault
 
+class Task(object):
+    def __init__(self, name, budget, period):
+        self.name = name
+        self.budget = budget
+        self.period = period
+
 def group_events(events):
     """Sort trace events by name, forming a dictionary of event lists under each name sorted by start time"""
     event_groups = defaultdict(list)
@@ -31,6 +37,7 @@ clock_speed = 498000000
 def populate_events(file_name):
     final_event_time = None
     trace_events = []
+    tasks = [Task('task 0', 0.45, 2.0), Task('task 1', 0.5, 0.7)]
     with open(file_name, 'r') as f:
         first_event = None
         for line in f.readlines():
@@ -108,5 +115,5 @@ def populate_events(file_name):
                                thread_stop,
                                None, None, fault))
 
-    return (trace_events, final_event_time)
+    return (trace_events, final_event_time, tasks)
 

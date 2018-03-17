@@ -13,7 +13,7 @@ win.setWindowTitle('schedplot')
 layout = pg.GraphicsLayout()
 win.setCentralItem(layout)
 
-(trace_events, final_event_time) = populate_events('sample.txt')
+(trace_events, final_event_time, tasks) = populate_events('sample.txt')
 
 def create_time_axis():
     time_axis = pg.AxisItem(orientation='bottom')
@@ -71,6 +71,7 @@ def plot_data(plot_target, grouped_events):
     y_offset = 0
     for event_name in grouped_events.keys():
         event_list = grouped_events[event_name]
+
         if len(event_list) > 0:
             event_plot = None
             fault_plot = None
@@ -100,6 +101,18 @@ def plot_data(plot_target, grouped_events):
 
             if fault_plot is not None:
                 plot_target.addItem(fault_plot)
+
+            # Plot task parameter arrows (deadlines)
+            for task in tasks:
+                if task.name in event_name:
+                    values = np.arange(0, final_event_time, task.period)
+                    for x in values:
+                        a = pg.ArrowItem(angle=-90, tipAngle=45, baseAngle=10,
+                                         headLen=13, tailLen=11, tailWidth=4,
+                                         pen={'color': 'k', 'width': 1},
+                                         brush='w')
+                        a.setPos(x, y_offset)
+                        plot_target.addItem(a)
 
             y_offset += 1
 
