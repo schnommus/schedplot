@@ -76,6 +76,8 @@ def plot_data(plot_target, grouped_events):
             event_plot = None
             fault_plot = None
 
+            all_tags = []
+
             if event_list[0].end_time is not None:
                 all_begs = []
                 all_ends = []
@@ -85,6 +87,11 @@ def plot_data(plot_target, grouped_events):
                     all_ends.append(e.end_time)
                     if e.fault:
                         all_faults.append(e.end_time)
+                    if e.tag is not None:
+                        tag = pg.TextItem(anchor=(1, 1), fill=pg.mkBrush(0, 0, 0, 128))
+                        tag.setPos(e.end_time, y_offset)
+                        tag.setText(e.tag)
+                        all_tags.append(tag)
                 colour = pg.hsvColor(y_offset/n_events)
                 event_plot = pg.BarGraphItem(x0=all_begs, x1=all_ends, height=1, y0=[y_offset]*len(all_begs), brush=colour)
                 y_points = [y_offset+0.5]*len(all_faults)
@@ -101,6 +108,9 @@ def plot_data(plot_target, grouped_events):
 
             if fault_plot is not None:
                 plot_target.addItem(fault_plot)
+
+            for tag in all_tags[0:200]:
+                plot_target.addItem(tag)
 
             # Plot task parameter arrows (deadlines)
             for task in tasks:

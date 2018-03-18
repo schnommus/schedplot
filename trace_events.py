@@ -4,7 +4,8 @@ from collections import defaultdict
 from sel4_types import *
 
 class TraceEvent(object):
-    def __init__(self, name, detail_text, start_time, end_time=None, cpu_id=None, exit_id=None, fault=False):
+    def __init__(self, name, detail_text, start_time, end_time=None,
+                 cpu_id=None, exit_id=None, fault=False, tag=None):
         self.name = name
         self.detail_text = detail_text
         self.start_time = start_time
@@ -12,6 +13,7 @@ class TraceEvent(object):
         self.cpu_id = cpu_id
         self.exit_id = exit_id
         self.fault = fault
+        self.tag = tag
 
 class Task(object):
     def __init__(self, name, budget, period):
@@ -45,7 +47,7 @@ def populate_events(file_name):
             values = tuple(line.strip().split(','))
 
             (log_id, cpu_id, start, duration, path, path_word,
-                exit_tcb_addr, exit_tcb_name, fault) = values
+                exit_tcb_addr, exit_tcb_name, fault, capreg) = values
 
             start = float(start)/clock_speed
             duration = float(duration)/clock_speed
@@ -58,7 +60,11 @@ def populate_events(file_name):
             # Always update this in case it's the 'last' event
             final_event_time = start + duration
 
-            path_info = decode_kernel_path(KernelEntryType(int(path)), int(path_word, 16))
+            path_info = decode_kernel_path(
+                    KernelEntryType(int(path)), int(path_word, 16), int(capreg, 16))
+
+            path_tag = get_kernel_path_tag(
+                    KernelEntryType(int(path)), int(path_word, 16), int(capreg, 16))
 
             exit_tcb_ident = "[0x{}] '{}'".format(exit_tcb_addr, exit_tcb_name)
 
@@ -84,7 +90,9 @@ def populate_events(file_name):
                            start,
                            start + duration,
                            int(cpu_id),
-                           exit_tcb_ident))
+                           exit_tcb_ident,
+                           False,
+                           path_tag))
 
             # Possibly create a thread event if we have older kernel events on the same core
             # TODO: what happens with sched context donation?

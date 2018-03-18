@@ -55,11 +55,20 @@ class CapType(Enum):
     sched_context_cap = 78
     sched_control_cap = 94
 
-def decode_kernel_path(entry_type, word_int):
+def get_kernel_path_tag(entry_type, word_int, capreg_int):
+    if entry_type == KernelEntryType.UnknownSyscall:
+        if word_int == 540:
+            return chr(capreg_int)
+    return None
+
+def decode_kernel_path(entry_type, word_int, capreg_int):
     if entry_type == KernelEntryType.Interrupt:
         return "IRQ #{}".format(word_int)
     elif entry_type == KernelEntryType.UnknownSyscall:
-        return "word = {}".format(word_int)
+        if word_int == 540:
+            return "DebugPutChar: {}".format(chr(capreg_int))
+        else:
+            return "word = {}".format(word_int)
     elif entry_type == KernelEntryType.VMFault:
         return "fault_type = {}".format(word_int)
     elif entry_type == KernelEntryType.UserLevelFault:
