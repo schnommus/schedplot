@@ -1,6 +1,9 @@
 from enum import Enum
 from bitstruct import unpack
 
+# WARNING: A lot of these are automatically generated when the kernel is built
+# You'll need to update them with any significant kernel changes.
+
 class KernelEntryType(Enum):
     Interrupt = 0
     UnknownSyscall = 1
@@ -31,6 +34,27 @@ class FaultType(Enum):
     Timeout = 5
     VMFault = 6
 
+class CapType(Enum):
+    null_cap = 0
+    untyped_cap = 2
+    endpoint_cap = 4
+    notification_cap = 6
+    reply_cap = 8
+    cnode_cap = 10
+    thread_cap = 12
+    small_frame_cap = 1
+    frame_cap = 3
+    asid_pool_cap = 5
+    page_table_cap = 7
+    page_directory_cap = 9
+    asid_control_cap = 11
+    irq_control_cap = 14
+    irq_handler_cap = 30
+    zombie_cap = 46
+    domain_cap = 62
+    sched_context_cap = 78
+    sched_control_cap = 94
+
 def decode_kernel_path(entry_type, word_int):
     if entry_type == KernelEntryType.Interrupt:
         return "IRQ #{}".format(word_int)
@@ -47,6 +71,6 @@ def decode_kernel_path(entry_type, word_int):
         word_bytes = word_int.to_bytes(4, byteorder='big')
         tuple_of_data = unpack("u19u1u5u4u3", word_bytes)
         (invoc_tag, is_fastpath, cap_type, syscall_no, _) = tuple_of_data
-        return "{} - [fp:{},ct:{}]".format(SyscallType(syscall_no), is_fastpath, cap_type)
+        return "{} - [{}, fp:{}]".format(SyscallType(syscall_no), CapType(cap_type), is_fastpath)
 
     return "Unknown"
