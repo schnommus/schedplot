@@ -1,9 +1,11 @@
 #!/bin/python3
 
+import sys
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
 from pyqtgraph.Point import Point
+import argparse
 
 from trace_events import *
 
@@ -102,8 +104,8 @@ def plot_data(plot_target, grouped_events, tasks, final_event_time):
 
             y_offset += 1
 
-def start_application():
-    (trace_events, final_event_time, tasks) = populate_events('sample.txt')
+def start_application(args):
+    (trace_events, final_event_time, tasks) = populate_events(args)
 
     app = QtGui.QApplication([])
     win = pg.GraphicsWindow()
@@ -183,11 +185,16 @@ def start_application():
 
     proxy = pg.SignalProxy(plot_upper.scene().sigMouseMoved, rateLimit=60, slot=mouseMoved)
 
+    ## Start Qt event loop unless running in interactive mode or using pyside.
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         QtGui.QApplication.instance().exec_()
 
 
-## Start Qt event loop unless running in interactive mode or using pyside.
+parser = argparse.ArgumentParser(description='Plot and perform metrics on scheduler dumps')
+
+parser.add_argument('in_filename', help='Filename of scheduler dump to process')
+parser.add_argument('--isolate_core', default=None, type=int, help='Only display readings from this core')
+
 if __name__ == '__main__':
-    import sys
-    start_application()
+    args = parser.parse_args()
+    start_application(args)

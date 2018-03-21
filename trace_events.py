@@ -36,11 +36,12 @@ def print_time(t):
 
 clock_speed = 498000000
 
-def populate_events(file_name):
+def populate_events(args):
     final_event_time = None
     trace_events = []
     tasks = [Task('task 0', 0.45, 2.0), Task('task 1', 0.5, 0.7)]
-    with open(file_name, 'r') as f:
+    basic_stats = defaultdict(float)
+    with open(args.in_filename, 'r') as f:
         first_event = None
         for line in f.readlines():
 
@@ -48,6 +49,10 @@ def populate_events(file_name):
 
             (log_id, cpu_id, start, duration, path, path_word,
                 exit_tcb_addr, exit_tcb_name, fault, capreg) = values
+
+            if args.isolate_core is not None:
+                if int(cpu_id) != args.isolate_core:
+                    continue
 
             start = float(start)/clock_speed
             duration = float(duration)/clock_speed
@@ -70,6 +75,13 @@ def populate_events(file_name):
 
             def detail(name, value):
                 return "<b>{}:</b> {}".format(name, value)
+
+            basic_stats['kernel_entries'] += 1
+            basic_stats['kernel_cumulative_entry_time'] += duration
+            basic_stats['kernel_average_entry_time'] += \
+                basic_stats['kernel_cumulative_entry_time'] / basic_stats['kernel_entries']
+            basic_stats['kernel_utilisation'] = \
+                basic_stats['kernel_cumulative_entry_time'] / final_event_time
 
             kernel_details = "<br/>".join([
                     detail("log_id", log_id),
@@ -122,6 +134,22 @@ def populate_events(file_name):
                                thread_start,
                                thread_stop,
                                None, None, fault))
+
+                basic_stats[thread_name + '_entries'] += 1
+                basic_stats[thread_name + '_cumulative_entry_time'] += thread_stop - thread_start
+                basic_stats[thread_name + '_average_entry_time'] = \
+                    basic_stats[thread_name + '_cumulative_entry_time'] / \
+                        basic_stats[thread_name + '_entries']
+                basic_stats[thread_name + '_utilisation'] = \
+                    basic_stats[thread_name + '_cumulative_entry_time'] / \
+                        final_event_time
+
+
+    for stat in basic_stats.keys():
+        value = basic_stats[stat]
+        if 'time' in stat:
+            value = print_time(value)
+        print("{} = {}".format(stat, value))
 
     return (trace_events, final_event_time, tasks)
 
