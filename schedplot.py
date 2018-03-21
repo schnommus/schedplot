@@ -7,14 +7,6 @@ from pyqtgraph.Point import Point
 
 from trace_events import *
 
-app = QtGui.QApplication([])
-win = pg.GraphicsWindow()
-win.setWindowTitle('schedplot')
-layout = pg.GraphicsLayout()
-win.setCentralItem(layout)
-
-(trace_events, final_event_time, tasks) = populate_events('sample.txt')
-
 def create_time_axis():
     time_axis = pg.AxisItem(orientation='bottom')
     time_axis.setLabel(units='S')
@@ -43,30 +35,8 @@ def get_event_at(x, y, grouped_events):
 
     return None
 
-g_events = group_events(trace_events)
 
-noscroll_viewbox = pg.ViewBox()
-noscroll_viewbox.setMouseEnabled(x=False, y=False)
-noscroll_viewbox.setLimits(xMin=0, xMax=final_event_time)
-hscroll_viewbox = pg.ViewBox()
-hscroll_viewbox.setMouseEnabled(x=True, y=False)
-plot_upper = layout.addPlot(row=0, col=0,
-    axisItems={'left': create_event_axis(g_events), 'bottom': create_time_axis()},
-    viewBox=hscroll_viewbox)
-plot_lower = layout.addPlot(row=1, col=0, viewBox=noscroll_viewbox)
-layout.layout.setRowStretchFactor(0, 3)
-
-region = pg.LinearRegionItem()
-region.setZValue(10)
-region.setBounds((0, final_event_time))
-region.setRegion((0, final_event_time))
-# Add the LinearRegionItem to the ViewBox, but tell the ViewBox to exclude this
-# item when doing auto-range calculations.
-plot_lower.addItem(region, ignoreBounds=True)
-
-plot_upper.setAutoVisible(y=True)
-
-def plot_data(plot_target, grouped_events):
+def plot_data(plot_target, grouped_events, tasks, final_event_time):
     n_events = len(grouped_events.keys())
     y_offset = 0
     for event_name in grouped_events.keys():
@@ -113,6 +83,7 @@ def plot_data(plot_target, grouped_events):
                 plot_target.addItem(fault_plot)
 
             """
+            # Too slow for now
             for tag in all_tags:
                 plot_target.addItem(tag)
             """
@@ -131,55 +102,92 @@ def plot_data(plot_target, grouped_events):
 
             y_offset += 1
 
-plot_data(plot_upper, g_events)
-plot_data(plot_lower, g_events)
+def start_application():
+    (trace_events, final_event_time, tasks) = populate_events('sample.txt')
 
-tooltip = pg.TextItem(anchor=(1, 1), fill=pg.mkBrush(0, 0, 0, 128))
-tooltip.setPos(0, 0)
-plot_upper.addItem(tooltip)
+    app = QtGui.QApplication([])
+    win = pg.GraphicsWindow()
+    win.setWindowTitle('schedplot')
+    layout = pg.GraphicsLayout()
+    win.setCentralItem(layout)
 
-def update():
+    g_events = group_events(trace_events)
+
+    noscroll_viewbox = pg.ViewBox()
+    noscroll_viewbox.setMouseEnabled(x=False, y=False)
+    noscroll_viewbox.setLimits(xMin=0, xMax=final_event_time)
+    hscroll_viewbox = pg.ViewBox()
+    hscroll_viewbox.setMouseEnabled(x=True, y=False)
+    plot_upper = layout.addPlot(row=0, col=0,
+        axisItems={'left': create_event_axis(g_events), 'bottom': create_time_axis()},
+        viewBox=hscroll_viewbox)
+    plot_lower = layout.addPlot(row=1, col=0, viewBox=noscroll_viewbox)
+    layout.layout.setRowStretchFactor(0, 3)
+
+    region = pg.LinearRegionItem()
     region.setZValue(10)
-    minX, maxX = region.getRegion()
-    plot_upper.setXRange(minX, maxX, padding=0)
-    plot_upper.setYRange(0, len(g_events.keys()), padding=0)
+    region.setBounds((0, final_event_time))
+    region.setRegion((0, final_event_time))
 
-region.sigRegionChanged.connect(update)
+    # Add the LinearRegionItem to the ViewBox, but tell the ViewBox to exclude this
+    # item when doing auto-range calculations.
+    plot_lower.addItem(region, ignoreBounds=True)
 
-def updateRegion(window, viewRange):
-    rgn = viewRange[0]
-    region.setRegion(rgn)
+    plot_upper.setAutoVisible(y=True)
 
-plot_upper.sigRangeChanged.connect(updateRegion)
+    plot_data(plot_upper, g_events, tasks, final_event_time)
+    plot_data(plot_lower, g_events, tasks, final_event_time)
 
-region.setRegion([1, 2])
+    tooltip = pg.TextItem(anchor=(1, 1), fill=pg.mkBrush(0, 0, 0, 128))
+    tooltip.setPos(0, 0)
+    plot_upper.addItem(tooltip)
 
-tooltip_format = """
-<span style='font-size: 10pt; color: white'><b>%s</b></span> <br/>
-<span style='font-size: 8pt; color: white'>%s</span>
-"""
+    # Set up GUI callbacks
+    def update():
+        region.setZValue(10)
+        minX, maxX = region.getRegion()
+        plot_upper.setXRange(minX, maxX, padding=0)
+        plot_upper.setYRange(0, len(g_events.keys()), padding=0)
 
-def mouseMoved(evt):
-    pos = evt[0]  ## using signal proxy turns original arguments into a tuple
-    if plot_upper.sceneBoundingRect().contains(pos):
-        mousePoint = hscroll_viewbox.mapSceneToView(pos)
-        event = get_event_at(mousePoint.x(), mousePoint.y(), g_events)
+    region.sigRegionChanged.connect(update)
 
-        if event is None:
+    def updateRegion(window, viewRange):
+        rgn = viewRange[0]
+        region.setRegion(rgn)
+
+    plot_upper.sigRangeChanged.connect(updateRegion)
+
+    region.setRegion([1, 2])
+
+    tooltip_format = """
+    <span style='font-size: 10pt; color: white'><b>%s</b></span> <br/>
+    <span style='font-size: 8pt; color: white'>%s</span>
+    """
+
+    def mouseMoved(evt):
+        pos = evt[0]  ## using signal proxy turns original arguments into a tuple
+        if plot_upper.sceneBoundingRect().contains(pos):
+            mousePoint = hscroll_viewbox.mapSceneToView(pos)
+            event = get_event_at(mousePoint.x(), mousePoint.y(), g_events)
+
+            if event is None:
+                tooltip.setVisible(False)
+                return
+
+            tooltip.setHtml(tooltip_format % (event.name, event.detail_text))
+            tooltip.setPos(mousePoint.x(), mousePoint.y())
+            tooltip.setVisible(True)
+        else:
             tooltip.setVisible(False)
             return
 
-        tooltip.setHtml(tooltip_format % (event.name, event.detail_text))
-        tooltip.setPos(mousePoint.x(), mousePoint.y())
-        tooltip.setVisible(True)
-    else:
-        tooltip.setVisible(False)
-        return
+    proxy = pg.SignalProxy(plot_upper.scene().sigMouseMoved, rateLimit=60, slot=mouseMoved)
 
-proxy = pg.SignalProxy(plot_upper.scene().sigMouseMoved, rateLimit=60, slot=mouseMoved)
+    if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
+        QtGui.QApplication.instance().exec_()
+
 
 ## Start Qt event loop unless running in interactive mode or using pyside.
 if __name__ == '__main__':
     import sys
-    if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-        QtGui.QApplication.instance().exec_()
+    start_application()
