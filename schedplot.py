@@ -194,6 +194,10 @@ parser = argparse.ArgumentParser(description='Plot and perform metrics on schedu
 
 parser.add_argument('in_filename', help='Filename of scheduler dump to process')
 parser.add_argument('--isolate_core', default=None, type=int, help='Only display readings from this core')
+parser.add_argument('--ignore_threads', default=[], type=str, nargs='*',
+        help="Don't create thread events with these TCB names")
+parser.add_argument('--keep_threads', default=[], type=str, nargs='*',
+        help="Only create thread events with these TCB names")
 
 if __name__ == '__main__':
     args = parser.parse_args()

@@ -78,7 +78,7 @@ def populate_events(args):
 
             basic_stats['kernel_entries'] += 1
             basic_stats['kernel_cumulative_entry_time'] += duration
-            basic_stats['kernel_average_entry_time'] += \
+            basic_stats['kernel_average_entry_time'] = \
                 basic_stats['kernel_cumulative_entry_time'] / basic_stats['kernel_entries']
 
             kernel_details = "<br/>".join([
@@ -110,6 +110,7 @@ def populate_events(args):
             local_kernel_events = list(filter(lambda e: e.name == kernel_name, local_trace_events))
             if len(local_kernel_events) > 1:
                 last_kernel_event = local_kernel_events[-2]
+                last_event = local_kernel_events[-2]
 
                 thread_name = last_kernel_event.exit_id
                 thread_start = last_kernel_event.end_time
@@ -126,18 +127,32 @@ def populate_events(args):
 
                 fault = FaultType(int(fault)) is not FaultType.NullFault
 
-                trace_events.append(
-                    TraceEvent(thread_name,
-                               thread_details,
-                               thread_start,
-                               thread_stop,
-                               None, None, fault))
+                actually_add_event = True
 
-                basic_stats[thread_name + '_entries'] += 1
-                basic_stats[thread_name + '_cumulative_entry_time'] += thread_stop - thread_start
-                basic_stats[thread_name + '_average_entry_time'] = \
-                    basic_stats[thread_name + '_cumulative_entry_time'] / \
-                        basic_stats[thread_name + '_entries']
+                for ignore_name in args.ignore_threads:
+                    if ignore_name in thread_name:
+                        actually_add_event = False
+
+                if args.keep_threads != []:
+                    actually_add_event = False
+                    for keep_name in args.keep_threads:
+                        if keep_name in thread_name:
+                            actually_add_event = True
+
+                if actually_add_event:
+                    trace_events.append(
+                        TraceEvent(thread_name,
+                                   thread_details,
+                                   thread_start,
+                                   thread_stop,
+                                   None, None, fault))
+
+                    basic_stats[thread_name + '_entries'] += 1
+                    basic_stats[thread_name + '_cumulative_entry_time'] \
+                            += thread_stop - thread_start
+                    basic_stats[thread_name + '_average_entry_time'] = \
+                        basic_stats[thread_name + '_cumulative_entry_time'] / \
+                            basic_stats[thread_name + '_entries']
 
     keys = list(basic_stats.keys())
     total_utilization = 0.0
