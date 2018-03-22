@@ -18,7 +18,7 @@ def create_time_axis():
 def create_event_axis(grouped_events):
     task_axis = pg.AxisItem(orientation='left')
     task_axis.setTicks([
-        [(index+0.5, name.replace(']', ']\n')) for index, name in enumerate(grouped_events.keys())],
+        [(index+0.5, name.replace('|', '|\n')) for index, name in enumerate(grouped_events.keys())],
         ])
     return task_axis
 

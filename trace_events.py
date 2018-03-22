@@ -71,7 +71,7 @@ def populate_events(args):
             path_tag = get_kernel_path_tag(
                     KernelEntryType(int(path)), int(path_word, 16), int(capreg, 16))
 
-            exit_tcb_ident = "[0x{}] '{}'".format(exit_tcb_addr, exit_tcb_name)
+            exit_tcb_ident = "[0x{}|'{}']".format(exit_tcb_addr, exit_tcb_name)
 
             def detail(name, value):
                 return "<b>{}:</b> {}".format(name, value)
@@ -80,8 +80,6 @@ def populate_events(args):
             basic_stats['kernel_cumulative_entry_time'] += duration
             basic_stats['kernel_average_entry_time'] += \
                 basic_stats['kernel_cumulative_entry_time'] / basic_stats['kernel_entries']
-            basic_stats['kernel_utilisation'] = \
-                basic_stats['kernel_cumulative_entry_time'] / final_event_time
 
             kernel_details = "<br/>".join([
                     detail("log_id", log_id),
@@ -140,10 +138,23 @@ def populate_events(args):
                 basic_stats[thread_name + '_average_entry_time'] = \
                     basic_stats[thread_name + '_cumulative_entry_time'] / \
                         basic_stats[thread_name + '_entries']
-                basic_stats[thread_name + '_utilisation'] = \
-                    basic_stats[thread_name + '_cumulative_entry_time'] / \
-                        final_event_time
 
+    keys = list(basic_stats.keys())
+    total_utilization = 0.0
+    total_entry_time = 0.0
+    for stat in keys:
+        key = '_cumulative_entry_time'
+        if key in stat:
+            stat_name = stat.split('_cumulative_entry_time')[0]
+            cumulative_entry_time = basic_stats[stat_name + '_cumulative_entry_time']
+            total_entry_time += cumulative_entry_time
+            utilization = cumulative_entry_time / final_event_time
+            basic_stats[stat_name + '_utilisation'] = utilization
+            total_utilization += utilization
+
+    basic_stats['total_utilization'] = total_utilization
+    basic_stats['total_entry_time'] = total_entry_time
+    basic_stats['final_event_time'] = final_event_time
 
     for stat in basic_stats.keys():
         value = basic_stats[stat]
