@@ -39,7 +39,8 @@ clock_speed = 498000000
 def populate_events(args):
     final_event_time = None
     trace_events = []
-    tasks = [Task('task 0', 0.45, 2.0), Task('task 1', 0.5, 0.7)]
+    tasks = [Task('C0T0', 0.45, 2.0), Task('C0T1', 0.5, 0.7),
+             Task('C1T0', 0.2, 0.3), Task('C1T1', 0.5, 2)]
     basic_stats = defaultdict(float)
     with open(args.in_filename, 'r') as f:
         first_event = None
@@ -49,6 +50,9 @@ def populate_events(args):
 
             (log_id, cpu_id, start, duration, path, path_word,
                 exit_tcb_addr, exit_tcb_name, fault, capreg) = values
+
+            if int(fault) >= 7:
+                fault = 7
 
             if args.isolate_core is not None:
                 if int(cpu_id) != args.isolate_core:

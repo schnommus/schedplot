@@ -33,6 +33,7 @@ class FaultType(Enum):
     UserException = 3
     Timeout = 5
     VMFault = 6
+    SchedplotUnknown = 7
 
 class CapType(Enum):
     null_cap = 0
