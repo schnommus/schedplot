@@ -48,8 +48,19 @@ def populate_events(args):
 
             values = tuple(line.strip().split(','))
 
-            (log_id, cpu_id, start, duration, path, path_word,
-                exit_tcb_addr, exit_tcb_name, fault, capreg) = values
+            if len(values) == 10:
+                (log_id, cpu_id, start, duration, path, path_word,
+                    exit_tcb_addr, exit_tcb_name, fault, capreg) = values
+            elif len(values) == 5:
+                (log_id, cpu_id, start, duration, exit_tcb_addr) = values
+                path = "7"
+                path_word = "0"
+                exit_tcb_name = "U[C{}]".format(cpu_id)
+                fault = 7
+                capreg = "0"
+            else:
+                print("Unknown scheduler log format")
+                return
 
             if int(fault) >= 7:
                 fault = 7

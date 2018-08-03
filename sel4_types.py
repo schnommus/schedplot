@@ -12,6 +12,7 @@ class KernelEntryType(Enum):
     VMFault = 4
     Syscall = 5
     UnimplementedDevice = 6
+    SchedplotUnknown = 7
 
 class SyscallType(Enum):
     Call = 1
