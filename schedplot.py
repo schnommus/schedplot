@@ -38,7 +38,7 @@ def get_event_at(x, y, grouped_events):
     return None
 
 
-def plot_data(plot_target, grouped_events, tasks, final_event_time):
+def plot_data(plot_target, grouped_events, tasks, final_event_time, args):
     n_events = len(grouped_events.keys())
     y_offset = 0
     for event_name in grouped_events.keys():
@@ -59,14 +59,14 @@ def plot_data(plot_target, grouped_events, tasks, final_event_time):
                     all_ends.append(e.end_time)
                     if e.fault:
                         all_faults.append(e.end_time)
-                    """
-                    # Too slow for now
-                    if e.tag is not None:
+
+                    # This is pretty slow!
+                    if args.label_putchar and e.tag is not None:
                         tag = pg.TextItem(anchor=(1, 1), fill=pg.mkBrush(0, 0, 0, 128))
                         tag.setPos(e.end_time, y_offset)
                         tag.setText(e.tag)
                         all_tags.append(tag)
-                    """
+
                 colour = pg.hsvColor(y_offset/n_events)
                 event_plot = pg.BarGraphItem(x0=all_begs, x1=all_ends, height=1, y0=[y_offset]*len(all_begs), brush=colour)
                 y_points = [y_offset+0.5]*len(all_faults)
@@ -84,11 +84,10 @@ def plot_data(plot_target, grouped_events, tasks, final_event_time):
             if fault_plot is not None:
                 plot_target.addItem(fault_plot)
 
-            """
-            # Too slow for now
-            for tag in all_tags:
-                plot_target.addItem(tag)
-            """
+            if args.label_putchar:
+                # Too slow for now
+                for tag in all_tags:
+                    plot_target.addItem(tag)
 
             # Plot task parameter arrows (deadlines)
             for task in tasks:
@@ -137,8 +136,8 @@ def start_application(args):
 
     plot_upper.setAutoVisible(y=True)
 
-    plot_data(plot_upper, g_events, tasks, final_event_time)
-    plot_data(plot_lower, g_events, tasks, final_event_time)
+    plot_data(plot_upper, g_events, tasks, final_event_time, args)
+    plot_data(plot_lower, g_events, tasks, final_event_time, args)
 
     tooltip = pg.TextItem(anchor=(1, 1), fill=pg.mkBrush(0, 0, 0, 128))
     tooltip.setPos(0, 0)
@@ -198,6 +197,8 @@ parser.add_argument('--ignore_threads', default=[], type=str, nargs='*',
         help="Don't create thread events with these TCB names")
 parser.add_argument('--keep_threads', default=[], type=str, nargs='*',
         help="Only create thread events with these TCB names")
+parser.add_argument('--label_putchar', dest='label_putchar',
+                    default=False, action='store_true')
 
 if __name__ == '__main__':
     args = parser.parse_args()
