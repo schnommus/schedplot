@@ -15,10 +15,15 @@ def create_time_axis():
     time_axis.enableAutoSIPrefix(True)
     return time_axis
 
+def sorted_keys(grouped_events):
+    keys = list(grouped_events.keys())
+    keys = sorted(keys, key=lambda s: s.split('|')[-1])
+    return keys
+
 def create_event_axis(grouped_events):
     task_axis = pg.AxisItem(orientation='left')
     task_axis.setTicks([
-        [(index+0.5, name.replace('|', '|\n')) for index, name in enumerate(grouped_events.keys())],
+        [(index+0.5, name.replace('|', '|\n')) for index, name in enumerate(sorted_keys(grouped_events))],
         ])
     return task_axis
 
@@ -26,7 +31,7 @@ def get_event_at(x, y, grouped_events):
     """Given a position on the graph, find the event at that position"""
     event_index = round(y-0.5)
     if event_index >= 0 and event_index < len(grouped_events.keys()):
-        candidate_events = grouped_events[list(grouped_events.keys())[event_index]]
+        candidate_events = grouped_events[sorted_keys(grouped_events)[event_index]]
         if len(candidate_events) > 0:
             if candidate_events[0].end_time is not None:
                 # If this set has end times, find something that matches
@@ -41,7 +46,8 @@ def get_event_at(x, y, grouped_events):
 def plot_data(plot_target, grouped_events, tasks, final_event_time, args):
     n_events = len(grouped_events.keys())
     y_offset = 0
-    for event_name in grouped_events.keys():
+
+    for event_name in sorted_keys(grouped_events):
         event_list = grouped_events[event_name]
 
         if len(event_list) > 0:

@@ -39,8 +39,10 @@ clock_speed = 498000000
 def populate_events(args):
     final_event_time = None
     trace_events = []
-    tasks = [Task('C0T0', 0.45, 2.0), Task('C0T1', 0.5, 0.7),
-             Task('C1T0', 0.2, 0.3), Task('C1T1', 0.5, 2)]
+    tasks = [Task('C0T0', 0, 0.08), Task('C0T1', 0, 0.05),
+             Task('C0T2', 0, 0.07), Task('C0T3', 0, 0.07),
+             Task('C1T0', 0, 0.01), Task('C1T1', 0, 0.01),
+             Task('C1T2', 0, 0.02), Task('C1T3', 0, 0.03)]
     basic_stats = defaultdict(float)
     with open(args.in_filename, 'r') as f:
         first_event = None

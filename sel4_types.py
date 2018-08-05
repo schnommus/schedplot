@@ -26,6 +26,7 @@ class SyscallType(Enum):
     Wait = 9
     NBWait = 10
     Yield = 11
+    SchedplotUnknown = 12
 
 class FaultType(Enum):
     NullFault = 0
@@ -59,7 +60,7 @@ class CapType(Enum):
 
 def get_kernel_path_tag(entry_type, word_int, capreg_int):
     if entry_type == KernelEntryType.UnknownSyscall:
-        if word_int == 540:
+        if word_int in [540, 556, 636]:
             return chr(capreg_int)
     return None
 
@@ -67,7 +68,7 @@ def decode_kernel_path(entry_type, word_int, capreg_int):
     if entry_type == KernelEntryType.Interrupt:
         return "IRQ #{}".format(word_int)
     elif entry_type == KernelEntryType.UnknownSyscall:
-        if word_int == 540:
+        if word_int in [540, 556, 636]:
             return "DebugPutChar: {}".format(chr(capreg_int))
         else:
             return "word = {}".format(word_int)
