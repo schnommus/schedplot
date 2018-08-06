@@ -12,7 +12,8 @@ class KernelEntryType(Enum):
     VMFault = 4
     Syscall = 5
     UnimplementedDevice = 6
-    SchedplotUnknown = 7
+    VCPUFault = 7
+    SchedplotUnknown = 8
 
 class SyscallType(Enum):
     Call = 1
@@ -26,7 +27,20 @@ class SyscallType(Enum):
     Wait = 9
     NBWait = 10
     Yield = 11
-    SchedplotUnknown = 12
+    #anything below this doesn't seem to be used anyway
+    DebugPutChar = 12,
+    DebugDumpScheduler = 13,
+    DebugHalt = 14,
+    DebugCapIdentify = 15,
+    DebugSnapshot = 16,
+    DebugNameThread = 17,
+    SchedplotUnknown18 = 18, #?
+    BenchmarkFlushCaches = 19,
+    BenchmarkResetLog = 20,
+    BenchmarkFinalizeLog = 21,
+    BenchmarkSetLogBuffer = 22,
+    BenchmarkNullSyscall = 23,
+    SchedplotUnknown = 24
 
 class FaultType(Enum):
     NullFault = 0

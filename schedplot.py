@@ -18,7 +18,7 @@ def create_time_axis():
 def sorted_keys(grouped_events):
     keys = list(grouped_events.keys())
     keys = sorted(keys, key=lambda s: s.split('|')[-1])
-    return keys
+    return list(reversed(keys))
 
 def create_event_axis(grouped_events):
     task_axis = pg.AxisItem(orientation='left')
@@ -96,16 +96,17 @@ def plot_data(plot_target, grouped_events, tasks, final_event_time, args):
                     plot_target.addItem(tag)
 
             # Plot task parameter arrows (deadlines)
-            for task in tasks:
-                if task.name in event_name:
-                    values = np.arange(0, final_event_time, task.period)
-                    for x in values:
-                        a = pg.ArrowItem(angle=-90, tipAngle=45, baseAngle=10,
-                                         headLen=13, tailLen=11, tailWidth=4,
-                                         pen={'color': 'k', 'width': 1},
-                                         brush='w')
-                        a.setPos(x, y_offset)
-                        plot_target.addItem(a)
+            if args.show_deadlines:
+                for task in tasks:
+                    if task.name in event_name:
+                        values = np.arange(0, final_event_time, task.period)
+                        for x in values:
+                            a = pg.ArrowItem(angle=-90, tipAngle=45, baseAngle=10,
+                                             headLen=13, tailLen=11, tailWidth=4,
+                                             pen={'color': 'k', 'width': 1},
+                                             brush='w')
+                            a.setPos(x, y_offset)
+                            plot_target.addItem(a)
 
             y_offset += 1
 
@@ -204,6 +205,8 @@ parser.add_argument('--ignore_threads', default=[], type=str, nargs='*',
 parser.add_argument('--keep_threads', default=[], type=str, nargs='*',
         help="Only create thread events with these TCB names")
 parser.add_argument('--label_putchar', dest='label_putchar',
+                    default=False, action='store_true')
+parser.add_argument('--show_deadlines', dest='show_deadlines',
                     default=False, action='store_true')
 
 if __name__ == '__main__':
