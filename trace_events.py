@@ -55,7 +55,7 @@ def populate_events(args):
                     exit_tcb_addr, exit_tcb_name, fault, capreg) = values
             elif len(values) == 5:
                 (log_id, cpu_id, start, duration, exit_tcb_addr) = values
-                path = "7"
+                path = "8"
                 path_word = "0"
                 exit_tcb_name = "U[C{}]".format(cpu_id)
                 fault = 7
@@ -64,6 +64,7 @@ def populate_events(args):
                 print("Unknown scheduler log format")
                 return
 
+            # TODO: this shouldn't be necessary..
             if int(fault) >= 7:
                 fault = 7
 
@@ -98,6 +99,8 @@ def populate_events(args):
             basic_stats['kernel_average_entry_time'] = \
                 basic_stats['kernel_cumulative_entry_time'] / basic_stats['kernel_entries']
 
+            duration_string = "%s c (%s)" % (int(duration * clock_speed), print_time(duration))
+
             kernel_details = "<br/>".join([
                     detail("log_id", log_id),
                     detail("cpu_id", cpu_id),
@@ -105,7 +108,7 @@ def populate_events(args):
                     detail("path_info", path_info),
                     detail("exit_to", exit_tcb_ident),
                     detail("current_fault", str(FaultType(int(fault)))),
-                    detail("event_duration", print_time(duration)),
+                    detail("event_duration", duration_string),
                     ])
 
             kernel_name = "Kernel"
@@ -132,6 +135,8 @@ def populate_events(args):
                 thread_name = last_kernel_event.exit_id
                 thread_start = last_kernel_event.end_time
                 thread_stop = start # of the current kernel event
+                thread_duration = thread_stop - thread_start
+                thread_duration_string = "%s c (%s)" % (int(thread_duration * clock_speed), print_time(thread_duration))
 
                 thread_details = "<br/>".join([
                         detail("log_id", log_id + "*"),
@@ -139,7 +144,7 @@ def populate_events(args):
                         detail("path_out", str(KernelEntryType(int(path)))),
                         detail("fault_out", str(FaultType(int(fault)))),
                         detail("next_thread", exit_tcb_ident), # next thread on the this core
-                        detail("event_duration", print_time(thread_stop - thread_start)),
+                        detail("event_duration", thread_duration_string),
                         ])
 
                 fault = FaultType(int(fault)) is not FaultType.NullFault

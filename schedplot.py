@@ -122,13 +122,14 @@ def start_application(args):
     g_events = group_events(trace_events)
 
     noscroll_viewbox = pg.ViewBox()
-    noscroll_viewbox.setMouseEnabled(x=False, y=False)
+    noscroll_viewbox.setMouseEnabled(x=True, y=False)
     noscroll_viewbox.setLimits(xMin=0, xMax=final_event_time)
     hscroll_viewbox = pg.ViewBox()
     hscroll_viewbox.setMouseEnabled(x=True, y=False)
     plot_upper = layout.addPlot(row=0, col=0,
         axisItems={'left': create_event_axis(g_events), 'bottom': create_time_axis()},
         viewBox=hscroll_viewbox)
+    plot_upper.showGrid(x=True)
     plot_lower = layout.addPlot(row=1, col=0, viewBox=noscroll_viewbox)
     layout.layout.setRowStretchFactor(0, 3)
 
@@ -150,12 +151,19 @@ def start_application(args):
     tooltip.setPos(0, 0)
     plot_upper.addItem(tooltip)
 
+    span_time = pg.TextItem(anchor=(1, 1), fill=pg.mkBrush(0, 0, 0, 128))
+    span_time.setPos(0, 0)
+    span_time_format = """<span style='font-size: 10pt; color: white'>[selected] <b>%s c</b> (%s)</span>"""
+    span_time.setVisible(True)
+    plot_lower.addItem(span_time)
+
     # Set up GUI callbacks
     def update():
         region.setZValue(10)
         minX, maxX = region.getRegion()
         plot_upper.setXRange(minX, maxX, padding=0)
         plot_upper.setYRange(0, len(g_events.keys()), padding=0)
+        plot_lower.setYRange(0, len(g_events.keys()), padding=0)
 
     region.sigRegionChanged.connect(update)
 
@@ -172,8 +180,7 @@ def start_application(args):
     <span style='font-size: 8pt; color: white'>%s</span>
     """
 
-    def mouseMoved(evt):
-        pos = evt[0]  ## using signal proxy turns original arguments into a tuple
+    def mouseUpper(pos):
         if plot_upper.sceneBoundingRect().contains(pos):
             mousePoint = hscroll_viewbox.mapSceneToView(pos)
             event = get_event_at(mousePoint.x(), mousePoint.y(), g_events)
@@ -188,6 +195,24 @@ def start_application(args):
         else:
             tooltip.setVisible(False)
             return
+
+    def mouseLower(pos):
+        if plot_lower.sceneBoundingRect().contains(pos):
+            mousePoint = noscroll_viewbox.mapSceneToView(pos)
+            minX, maxX = region.getRegion()
+            span_sec = maxX - minX;
+            span_cycles = int(span_sec * clock_speed);
+            span_time.setHtml(span_time_format % (span_cycles, print_time(span_sec)))
+            span_time.setPos(mousePoint.x(), mousePoint.y())
+            span_time.setVisible(True)
+        else:
+            span_time.setVisible(False)
+            return
+
+    def mouseMoved(evt):
+        pos = evt[0]  ## using signal proxy turns original arguments into a tuple
+        mouseUpper(pos)
+        mouseLower(pos)
 
     proxy = pg.SignalProxy(plot_upper.scene().sigMouseMoved, rateLimit=60, slot=mouseMoved)
 
