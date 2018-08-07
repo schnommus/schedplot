@@ -72,6 +72,16 @@ def populate_events(args):
                 if int(cpu_id) != args.isolate_core:
                     continue
 
+            start = int(start)
+            duration = int(duration)
+
+            if args.modeswitch_entry_overhead is not None:
+                start -= args.modeswitch_entry_overhead
+                duration += args.modeswitch_entry_overhead
+
+            if args.modeswitch_exit_overhead is not None:
+                duration += args.modeswitch_exit_overhead
+
             start = float(start)/clock_speed
             duration = float(duration)/clock_speed
 
@@ -111,7 +121,7 @@ def populate_events(args):
                     detail("event_duration", duration_string),
                     ])
 
-            kernel_name = "Kernel"
+            kernel_name = "Kernel [CPU%s]" % cpu_id
 
             # Append the kernel event
             trace_events.append(

@@ -73,7 +73,7 @@ def plot_data(plot_target, grouped_events, tasks, final_event_time, args):
                         tag.setText(e.tag)
                         all_tags.append(tag)
 
-                colour = pg.hsvColor(y_offset/n_events)
+                colour = pg.hsvColor(y_offset/n_events, alpha=1.0)
                 event_plot = pg.BarGraphItem(x0=all_begs, x1=all_ends, height=1, y0=[y_offset]*len(all_begs), brush=colour)
                 y_points = [y_offset+0.5]*len(all_faults)
                 fault_plot = pg.ScatterPlotItem(x=all_faults, y=y_points, brush='r', size=20, symbol='x')
@@ -233,6 +233,8 @@ parser.add_argument('--label_putchar', dest='label_putchar',
                     default=False, action='store_true')
 parser.add_argument('--show_deadlines', dest='show_deadlines',
                     default=False, action='store_true')
+parser.add_argument('--modeswitch_entry_overhead', default=None, type=int, help='Measured overhead when switching from userspace to kernel (cycles)')
+parser.add_argument('--modeswitch_exit_overhead', default=None, type=int, help='Measured overhead when switching from kernel to userspace (cycles)')
 
 if __name__ == '__main__':
     args = parser.parse_args()
