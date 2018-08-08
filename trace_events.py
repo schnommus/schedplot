@@ -75,13 +75,6 @@ def populate_events(args):
             start = int(start)
             duration = int(duration)
 
-            if args.modeswitch_entry_overhead is not None:
-                start -= args.modeswitch_entry_overhead
-                duration += args.modeswitch_entry_overhead
-
-            if args.modeswitch_exit_overhead is not None:
-                duration += args.modeswitch_exit_overhead
-
             start = float(start)/clock_speed
             duration = float(duration)/clock_speed
 

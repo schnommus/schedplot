@@ -42,6 +42,36 @@ def get_event_at(x, y, grouped_events):
 
     return None
 
+def get_kernel_events_in_range(xmin, xmax, grouped_events):
+    kernel_event_titles = filter(lambda x: 'Kernel' in x, sorted_keys(grouped_events))
+    events = []
+    for title in kernel_event_titles:
+        for e in grouped_events[title]:
+            if e.end_time > xmin and e.start_time < xmax:
+                events.append(e)
+    return events
+
+def context_switch_reality_string(args, selected_region, kernel_events):
+    # Compute actual context switch time given sequence of kernel events and a selected region
+    # Selected region should be from end of last event in first thread to start of first event
+    # in second thread. Assumes no simultaneous kernel events!
+
+    if args.logbuf_overhead is None or args.modeswitch_overhead is None:
+        return "unknown overheads!"
+
+    region_cycles = int(selected_region * clock_speed);
+
+    total_logbuf_overhead = 0.0
+    n_kernel_entries = 0
+    for e in kernel_events:
+        total_logbuf_overhead += args.logbuf_overhead
+        n_kernel_entries += 1
+
+    reality_cycles = region_cycles - total_logbuf_overhead + args.modeswitch_overhead
+
+    # nsc = null syscalls, klb = kernel log buffer overheads
+    return "{} c (1 nsc + {} klb)".format(reality_cycles, n_kernel_entries)
+
 
 def plot_data(plot_target, grouped_events, tasks, final_event_time, args):
     n_events = len(grouped_events.keys())
@@ -153,7 +183,10 @@ def start_application(args):
 
     span_time = pg.TextItem(anchor=(1, 1), fill=pg.mkBrush(0, 0, 0, 128))
     span_time.setPos(0, 0)
-    span_time_format = """<span style='font-size: 10pt; color: white'>[selected] <b>%s c</b> (%s)</span>"""
+    span_time_format = """
+    <span style='font-size: 10pt; color: white'>[selected] <b>%s c</b> (%s)</span> <br/>
+    <span style='font-size: 9pt; color: white'>[estimate] <b>%s</b></span>
+    """
     span_time.setVisible(True)
     plot_lower.addItem(span_time)
 
@@ -202,7 +235,9 @@ def start_application(args):
             minX, maxX = region.getRegion()
             span_sec = maxX - minX;
             span_cycles = int(span_sec * clock_speed);
-            span_time.setHtml(span_time_format % (span_cycles, print_time(span_sec)))
+            kernel_events = get_kernel_events_in_range(minX, maxX, g_events)
+            region_reality_string = context_switch_reality_string(args, maxX - minX, kernel_events)
+            span_time.setHtml(span_time_format % (span_cycles, print_time(span_sec), region_reality_string))
             span_time.setPos(mousePoint.x(), mousePoint.y())
             span_time.setVisible(True)
         else:
@@ -233,8 +268,8 @@ parser.add_argument('--label_putchar', dest='label_putchar',
                     default=False, action='store_true')
 parser.add_argument('--show_deadlines', dest='show_deadlines',
                     default=False, action='store_true')
-parser.add_argument('--modeswitch_entry_overhead', default=None, type=int, help='Measured overhead when switching from userspace to kernel (cycles)')
-parser.add_argument('--modeswitch_exit_overhead', default=None, type=int, help='Measured overhead when switching from kernel to userspace (cycles)')
+parser.add_argument('--modeswitch_overhead', default=None, type=int, help='Measured modeswitch overhead (in + out) in cycles')
+parser.add_argument('--logbuf_overhead', default=None, type=int, help='Measured overhead of log buffer (minus modeswitch overhead) in cycles')
 
 if __name__ == '__main__':
     args = parser.parse_args()
