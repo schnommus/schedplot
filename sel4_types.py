@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, auto
 from bitstruct import unpack
 
 # WARNING: A lot of these are automatically generated when the kernel is built
@@ -72,6 +72,47 @@ class CapType(Enum):
     sched_context_cap = 78
     sched_control_cap = 94
 
+
+class InvocationType(Enum):
+    InvalidInvocation = 0
+    UntypedRetype = auto()
+    TCBReadRegisters = auto()
+    TCBWriteRegisters = auto()
+    TCBCopyRegisters = auto()
+    TCBConfigure = auto()
+    TCBSetPriority = auto()
+    TCBSetMCPriority = auto()
+    TCBSetSchedParams = auto()
+    TCBSetTimeoutEndpoint = auto()
+    TCBSetIPCBuffer = auto()
+    TCBSetSpace = auto()
+    TCBSuspend = auto()
+    TCBResume = auto()
+    TCBBindNotification = auto()
+    TCBUnbindNotification = auto()
+    TCBSetAffinity = auto()
+    CNodeRevoke = auto()
+    CNodeDelete = auto()
+    CNodeCancelBadgedSends = auto()
+    CNodeCopy = auto()
+    CNodeMint = auto()
+    CNodeMove = auto()
+    CNodeMutate = auto()
+    CNodeRotate = auto()
+    IRQIssueIRQHandler = auto()
+    IRQAckIRQ = auto()
+    IRQSetIRQHandler = auto()
+    IRQClearIRQHandler = auto()
+    DomainSetSet = auto()
+    SchedControlConfigure = auto()
+    SchedContextBind = auto()
+    SchedContextUnbind = auto()
+    SchedContextUnbindObject = auto()
+    SchedContextConsumed = auto()
+    SchedContextYieldTo = auto()
+    SchedContextYieldToTimeout = auto()
+    nInvocationLabels = auto()
+
 def get_kernel_path_tag(entry_type, word_int, capreg_int):
     if entry_type == KernelEntryType.UnknownSyscall:
         if word_int in [540, 556, 636]:
@@ -97,6 +138,6 @@ def decode_kernel_path(entry_type, word_int, capreg_int):
         word_bytes = word_int.to_bytes(4, byteorder='big')
         tuple_of_data = unpack("u17u1u7u4u3", word_bytes)
         (invoc_tag, is_fastpath, cap_type, syscall_no, _) = tuple_of_data
-        return "{} - [{}, fp:{}]".format(SyscallType(syscall_no), CapType(cap_type), is_fastpath)
+        return "{} - [{}, fp:{}, {}]".format(SyscallType(syscall_no), CapType(cap_type), is_fastpath, InvocationType(invoc_tag))
 
     return "Unknown"
