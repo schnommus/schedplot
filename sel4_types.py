@@ -95,7 +95,7 @@ def decode_kernel_path(entry_type, word_int, capreg_int):
     elif entry_type == KernelEntryType.Syscall:
         word_int <<= 3
         word_bytes = word_int.to_bytes(4, byteorder='big')
-        tuple_of_data = unpack("u19u1u5u4u3", word_bytes)
+        tuple_of_data = unpack("u17u1u7u4u3", word_bytes)
         (invoc_tag, is_fastpath, cap_type, syscall_no, _) = tuple_of_data
         return "{} - [{}, fp:{}]".format(SyscallType(syscall_no), CapType(cap_type), is_fastpath)
 
