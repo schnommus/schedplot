@@ -34,7 +34,8 @@ def group_events(events):
 def print_time(t):
     return si_format(t, precision=3) + 's'
 
-clock_speed = 498000000
+clock_speed = 498000000 #Sabre
+#clock_speed = 18600000 #TK1-SOM
 #clock_speed = 3400000000
 
 def populate_events(args):

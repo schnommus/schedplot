@@ -115,7 +115,7 @@ class InvocationType(Enum):
 
 def get_kernel_path_tag(entry_type, word_int, capreg_int):
     if entry_type == KernelEntryType.UnknownSyscall:
-        if word_int in [540, 556, 636]:
+        if word_int & 0xF == SyscallType.DebugPutChar.value[0]:
             return chr(capreg_int)
     return None
 
@@ -123,7 +123,7 @@ def decode_kernel_path(entry_type, word_int, capreg_int):
     if entry_type == KernelEntryType.Interrupt:
         return "IRQ #{}".format(word_int)
     elif entry_type == KernelEntryType.UnknownSyscall:
-        if word_int in [540, 556, 636]:
+        if word_int & 0xF == SyscallType.DebugPutChar.value[0]:
             return "DebugPutChar: {}".format(chr(capreg_int))
         else:
             return "word = {}".format(word_int)
@@ -138,6 +138,16 @@ def decode_kernel_path(entry_type, word_int, capreg_int):
         word_bytes = word_int.to_bytes(4, byteorder='big')
         tuple_of_data = unpack("u17u1u7u4u3", word_bytes)
         (invoc_tag, is_fastpath, cap_type, syscall_no, _) = tuple_of_data
-        return "{} - [{}, fp:{}, {}]".format(SyscallType(syscall_no), CapType(cap_type), is_fastpath, InvocationType(invoc_tag))
+        invoc = ""
+        cap = ""
+        try:
+            invoc = InvocationType(invoc_tag)
+        except:
+            invoc = "?"
+        try:
+            cap = CapType(cap_type)
+        except:
+            cap = "?"
+        return "{} - [{}, fp:{}, {}]".format(SyscallType(syscall_no), cap, is_fastpath, invoc)
 
     return "Unknown"
