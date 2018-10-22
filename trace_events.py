@@ -3,7 +3,11 @@ from collections import defaultdict
 
 from sel4_types import *
 
+
 class TraceEvent(object):
+
+    last_r = None
+
     def __init__(self, name, detail_text, start_time, end_time=None,
                  cpu_id=None, exit_id=None, fault=False, tag=None):
         self.name = name
@@ -14,6 +18,12 @@ class TraceEvent(object):
         self.exit_id = exit_id
         self.fault = fault
         self.tag = tag
+
+        if tag == 'R':
+            TraceEvent.last_r = self.start_time
+        if tag == 'G' and TraceEvent.last_r is not None:
+            print(start_time - TraceEvent.last_r)
+
 
 class Task(object):
     def __init__(self, name, budget, period):
@@ -36,7 +46,7 @@ def print_time(t):
 
 clock_speed = 498000000 #Sabre
 #clock_speed = 18600000 #TK1-SOM
-#clock_speed = 3400000000
+#clock_speed = 3400000000 #Sandy
 
 def populate_events(args):
     final_event_time = None
@@ -59,7 +69,7 @@ def populate_events(args):
                 (log_id, cpu_id, start, duration, exit_tcb_addr) = values
                 path = "8"
                 path_word = "0"
-                exit_tcb_name = "U[C{}]".format(cpu_id)
+                exit_tcb_name = "U[]".format(exit_tcb_addr)
                 fault = 7
                 capreg = "0"
             else:

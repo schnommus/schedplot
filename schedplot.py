@@ -265,9 +265,9 @@ parser.add_argument('--ignore_threads', default=[], type=str, nargs='*',
 parser.add_argument('--keep_threads', default=[], type=str, nargs='*',
         help="Only create thread events with these TCB names")
 parser.add_argument('--label_putchar', dest='label_putchar',
-                    default=False, action='store_true')
+                    default=False, action='store_true', help="Display seL4_DebugPutChar calls inline with scheduling trace")
 parser.add_argument('--show_deadlines', dest='show_deadlines',
-                    default=False, action='store_true')
+                    default=False, action='store_true', help="Display sporadic task model implicit deadlines on top of task traces")
 parser.add_argument('--modeswitch_overhead', default=None, type=int, help='Measured modeswitch overhead (in + out) in cycles')
 parser.add_argument('--logbuf_overhead', default=None, type=int, help='Measured overhead of log buffer (minus modeswitch overhead) in cycles')
 
