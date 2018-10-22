@@ -2,7 +2,6 @@ from enum import Enum, auto
 from bitstruct import unpack
 
 # WARNING: A lot of these are automatically generated when the kernel is built
-# You'll need to update them with any significant kernel changes.
 
 class KernelEntryType(Enum):
     Interrupt = 0
@@ -114,12 +113,14 @@ class InvocationType(Enum):
     nInvocationLabels = auto()
 
 def get_kernel_path_tag(entry_type, word_int, capreg_int):
+    """At the moment this is just turning entry logs into DebugPutChar characters"""
     if entry_type == KernelEntryType.UnknownSyscall:
         if word_int & 0xF == SyscallType.DebugPutChar.value[0]:
             return chr(capreg_int)
     return None
 
 def decode_kernel_path(entry_type, word_int, capreg_int):
+    """Decode some easily-decodable kernel paths - i.e ordinary system calls"""
     if entry_type == KernelEntryType.Interrupt:
         return "IRQ #{}".format(word_int)
     elif entry_type == KernelEntryType.UnknownSyscall:

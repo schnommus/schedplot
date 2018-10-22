@@ -1,0 +1,48 @@
+USING SCHEDPLOT
+===============
+
+Install python3, and the following packages:
+    - pyqtgraph
+    - numpy
+    - bitstruct
+    - si_prefix
+
+Run with:
+
+$ ./schedplot.py -h
+
+And you'll get the following usage string:
+
+usage: schedplot.py [-h] [--isolate_core ISOLATE_CORE]
+                    [--ignore_threads [IGNORE_THREADS [IGNORE_THREADS ...]]]
+                    [--keep_threads [KEEP_THREADS [KEEP_THREADS ...]]]
+                    [--label_putchar] [--show_deadlines]
+                    [--modeswitch_overhead MODESWITCH_OVERHEAD]
+                    [--logbuf_overhead LOGBUF_OVERHEAD]
+                    [--clock_speed CLOCK_SPEED]
+                    in_filename
+
+Plot and perform metrics on scheduler dumps
+
+positional arguments:
+  in_filename           Filename of scheduler dump to process
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --isolate_core ISOLATE_CORE
+                        Only display readings from this core
+  --ignore_threads [IGNORE_THREADS [IGNORE_THREADS ...]]
+                        Don't create thread events with these TCB names
+  --keep_threads [KEEP_THREADS [KEEP_THREADS ...]]
+                        Only create thread events with these TCB names
+  --label_putchar       Display seL4_DebugPutChar calls inline with scheduling
+                        trace
+  --show_deadlines      Display sporadic task model implicit deadlines on top
+                        of task traces
+  --modeswitch_overhead MODESWITCH_OVERHEAD
+                        Measured modeswitch overhead (in + out) in cycles
+  --logbuf_overhead LOGBUF_OVERHEAD
+                        Measured overhead of log buffer (minus modeswitch
+                        overhead) in cycles
+  --clock_speed CLOCK_SPEED
+                        CPU clock speed in Hz (498MHz [sabre] default!)

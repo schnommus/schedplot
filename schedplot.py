@@ -10,17 +10,20 @@ import argparse
 from trace_events import *
 
 def create_time_axis():
+    """Render the time axis using correct SI prefixes"""
     time_axis = pg.AxisItem(orientation='bottom')
     time_axis.setLabel(units='S')
     time_axis.enableAutoSIPrefix(True)
     return time_axis
 
 def sorted_keys(grouped_events):
+    """Sort events by thread names"""
     keys = list(grouped_events.keys())
     keys = sorted(keys, key=lambda s: s.split('|')[-1])
     return list(reversed(keys))
 
 def create_event_axis(grouped_events):
+    """Prettyprint thread names on x-axis"""
     task_axis = pg.AxisItem(orientation='left')
     task_axis.setTicks([
         [(index+0.5, name.replace('|', '|\n')) for index, name in enumerate(sorted_keys(grouped_events))],
@@ -43,6 +46,7 @@ def get_event_at(x, y, grouped_events):
     return None
 
 def get_kernel_events_in_range(xmin, xmax, grouped_events):
+    """Retrieve all the kernel invocations that occur between 2 time endpoints"""
     kernel_event_titles = filter(lambda x: 'Kernel' in x, sorted_keys(grouped_events))
     events = []
     for title in kernel_event_titles:
@@ -51,10 +55,10 @@ def get_kernel_events_in_range(xmin, xmax, grouped_events):
                 events.append(e)
     return events
 
-def context_switch_reality_string(args, selected_region, kernel_events):
-    # Compute actual context switch time given sequence of kernel events and a selected region
-    # Selected region should be from end of last event in first thread to start of first event
-    # in second thread. Assumes no simultaneous kernel events!
+def logbuf_overhead_reality_string(args, selected_region, kernel_events):
+    """Compute 'projected' time given sequence of kernel events and a selected region
+       Selected region should be from end of last event in first thread to start of first event
+       in second thread. Assumes no simultaneous kernel events!"""
 
     if args.logbuf_overhead is None or args.modeswitch_overhead is None:
         return "unknown overheads!"
@@ -74,12 +78,16 @@ def context_switch_reality_string(args, selected_region, kernel_events):
 
 
 def plot_data(plot_target, grouped_events, tasks, final_event_time, args):
+    """Top-level function which actually plots all the trace events. Only needs to be called once"""
+
     n_events = len(grouped_events.keys())
     y_offset = 0
 
+    # For every thread (including Kernel 0...N)
     for event_name in sorted_keys(grouped_events):
         event_list = grouped_events[event_name]
 
+        # If there are any events
         if len(event_list) > 0:
             event_plot = None
             fault_plot = None
@@ -87,6 +95,7 @@ def plot_data(plot_target, grouped_events, tasks, final_event_time, args):
             all_tags = []
 
             if event_list[0].end_time is not None:
+                # It's an event with a duration
                 all_begs = []
                 all_ends = []
                 all_faults = []
@@ -106,8 +115,11 @@ def plot_data(plot_target, grouped_events, tasks, final_event_time, args):
                 colour = pg.hsvColor(y_offset/n_events, alpha=1.0)
                 event_plot = pg.BarGraphItem(x0=all_begs, x1=all_ends, height=1, y0=[y_offset]*len(all_begs), brush=colour)
                 y_points = [y_offset+0.5]*len(all_faults)
+
+                # If this event ends with a fault, plot it
                 fault_plot = pg.ScatterPlotItem(x=all_faults, y=y_points, brush='r', size=20, symbol='x')
             else:
+                # It's a one-shot event (not currently used)
                 all_begs = []
                 for e in event_list:
                     all_begs.append(e.start_time)
@@ -151,6 +163,7 @@ def start_application(args):
 
     g_events = group_events(trace_events)
 
+    # Set up all the view controls
     noscroll_viewbox = pg.ViewBox()
     noscroll_viewbox.setMouseEnabled(x=True, y=False)
     noscroll_viewbox.setLimits(xMin=0, xMax=final_event_time)
@@ -174,13 +187,16 @@ def start_application(args):
 
     plot_upper.setAutoVisible(y=True)
 
+    # Plot main window and minimap
     plot_data(plot_upper, g_events, tasks, final_event_time, args)
     plot_data(plot_lower, g_events, tasks, final_event_time, args)
 
+    # Create the event tooltip
     tooltip = pg.TextItem(anchor=(1, 1), fill=pg.mkBrush(0, 0, 0, 128))
     tooltip.setPos(0, 0)
     plot_upper.addItem(tooltip)
 
+    # Create the overhead estimation box
     span_time = pg.TextItem(anchor=(1, 1), fill=pg.mkBrush(0, 0, 0, 128))
     span_time.setPos(0, 0)
     span_time_format = """
@@ -213,6 +229,7 @@ def start_application(args):
     <span style='font-size: 8pt; color: white'>%s</span>
     """
 
+    # Check for tooltips on trace events
     def mouseUpper(pos):
         if plot_upper.sceneBoundingRect().contains(pos):
             mousePoint = hscroll_viewbox.mapSceneToView(pos)
@@ -229,6 +246,7 @@ def start_application(args):
             tooltip.setVisible(False)
             return
 
+    # Recalculate overhead accounting results on lower window
     def mouseLower(pos):
         if plot_lower.sceneBoundingRect().contains(pos):
             mousePoint = noscroll_viewbox.mapSceneToView(pos)
@@ -236,7 +254,7 @@ def start_application(args):
             span_sec = maxX - minX;
             span_cycles = int(span_sec * clock_speed);
             kernel_events = get_kernel_events_in_range(minX, maxX, g_events)
-            region_reality_string = context_switch_reality_string(args, maxX - minX, kernel_events)
+            region_reality_string = logbuf_overhead_reality_string(args, maxX - minX, kernel_events)
             span_time.setHtml(span_time_format % (span_cycles, print_time(span_sec), region_reality_string))
             span_time.setPos(mousePoint.x(), mousePoint.y())
             span_time.setVisible(True)
@@ -244,8 +262,9 @@ def start_application(args):
             span_time.setVisible(False)
             return
 
+    # Monster to handle all mouse events for upper and lower windows
     def mouseMoved(evt):
-        pos = evt[0]  ## using signal proxy turns original arguments into a tuple
+        pos = evt[0]  # using signal proxy turns original arguments into a tuple
         mouseUpper(pos)
         mouseLower(pos)
 
@@ -270,6 +289,7 @@ parser.add_argument('--show_deadlines', dest='show_deadlines',
                     default=False, action='store_true', help="Display sporadic task model implicit deadlines on top of task traces")
 parser.add_argument('--modeswitch_overhead', default=None, type=int, help='Measured modeswitch overhead (in + out) in cycles')
 parser.add_argument('--logbuf_overhead', default=None, type=int, help='Measured overhead of log buffer (minus modeswitch overhead) in cycles')
+parser.add_argument('--clock_speed', default=498000000, type=int, help='CPU clock speed in Hz (498MHz [sabre] default!)')
 
 if __name__ == '__main__':
     args = parser.parse_args()

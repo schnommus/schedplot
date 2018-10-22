@@ -2,9 +2,10 @@ from si_prefix import si_format
 from collections import defaultdict
 
 from sel4_types import *
-
+from rt_tasks import *
 
 class TraceEvent(object):
+    """Every duration event associated with a thread or the kernel is represented by a TraceEvent"""
 
     last_r = None
 
@@ -24,13 +25,6 @@ class TraceEvent(object):
         if tag == 'G' and TraceEvent.last_r is not None:
             print(start_time - TraceEvent.last_r)
 
-
-class Task(object):
-    def __init__(self, name, budget, period):
-        self.name = name
-        self.budget = budget
-        self.period = period
-
 def group_events(events):
     """Sort trace events by name, forming a dictionary of event lists under each name sorted by start time"""
     event_groups = defaultdict(list)
@@ -44,17 +38,11 @@ def group_events(events):
 def print_time(t):
     return si_format(t, precision=3) + 's'
 
-clock_speed = 498000000 #Sabre
-#clock_speed = 18600000 #TK1-SOM
-#clock_speed = 3400000000 #Sandy
-
 def populate_events(args):
+    """Top-level parser of scheduling dumps"""
     final_event_time = None
     trace_events = []
-    tasks = [Task('C0T0', 0, 0.08), Task('C0T1', 0, 0.05),
-             Task('C0T2', 0, 0.07), Task('C0T3', 0, 0.07),
-             Task('C1T0', 0, 0.01), Task('C1T1', 0, 0.01),
-             Task('C1T2', 0, 0.02), Task('C1T3', 0, 0.03)]
+    tasks = RT_TASKS
     basic_stats = defaultdict(float)
     with open(args.in_filename, 'r') as f:
         first_event = None
@@ -62,6 +50,7 @@ def populate_events(args):
 
             values = tuple(line.strip().split(','))
 
+            # Distinguish between 'Debug' and 'Lite' formats
             if len(values) == 10:
                 (log_id, cpu_id, start, duration, path, path_word,
                     exit_tcb_addr, exit_tcb_name, fault, capreg) = values
@@ -87,8 +76,8 @@ def populate_events(args):
             start = int(start)
             duration = int(duration)
 
-            start = float(start)/clock_speed
-            duration = float(duration)/clock_speed
+            start = float(start)/args.clock_speed
+            duration = float(duration)/args.clock_speed
 
             if first_event is None:
                 first_event = start
@@ -114,7 +103,7 @@ def populate_events(args):
             basic_stats['kernel_average_entry_time'] = \
                 basic_stats['kernel_cumulative_entry_time'] / basic_stats['kernel_entries']
 
-            duration_string = "%s c (%s)" % (int(duration * clock_speed), print_time(duration))
+            duration_string = "%s c (%s)" % (int(duration * args.clock_speed), print_time(duration))
 
             kernel_details = "<br/>".join([
                     detail("log_id", log_id),
@@ -151,7 +140,7 @@ def populate_events(args):
                 thread_start = last_kernel_event.end_time
                 thread_stop = start # of the current kernel event
                 thread_duration = thread_stop - thread_start
-                thread_duration_string = "%s c (%s)" % (int(thread_duration * clock_speed), print_time(thread_duration))
+                thread_duration_string = "%s c (%s)" % (int(thread_duration * args.clock_speed), print_time(thread_duration))
 
                 thread_details = "<br/>".join([
                         detail("log_id", log_id + "*"),
